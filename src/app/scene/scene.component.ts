@@ -20,29 +20,19 @@ export class SceneComponent implements OnInit, AfterViewInit
   private _camera: any = null;
   private _controls: any = null;
   private _stats: any = null;
+  private _pointLight;
+  private _pointLight2;
+  private _ambientLight;
 
   constructor () { }
 
   ngAfterViewInit(): void
   {
     this.initScene();
-    this.initSkybox();
     this.main();
   }
 
   ngOnInit(): void { }
-
-  private addLights()
-  {
-    const light = new THREE.AmbientLight(0x111111); // soft white light
-    this._scene.add(light);
-
-    const light2 = new THREE.PointLight(0xffffff, 2.0);
-    light2.position.z = 70;
-    light2.position.y = 70;
-    light2.position.x = 70;
-    this._scene.add(light2);
-  }
 
   private initSkybox()
   {
@@ -72,22 +62,44 @@ export class SceneComponent implements OnInit, AfterViewInit
     this._scene = new THREE.Scene();
     this._scene.background = skybox;
 
-    this._camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+    this._ambientLight = new THREE.AmbientLight(0x111111);
+    this._scene.add(this._ambientLight);
+
+    this._pointLight = new THREE.PointLight(0xffffff, 2, 70, 2);
+    this._pointLight.lookAt(0, -2, 0);
+    this._pointLight.position.z = -28;
+    this._pointLight.position.y = 10;
+    this._pointLight.position.x = 10;
+    this._pointLight2 = new THREE.PointLight(0xffffff, 1, 1000, 2);
+    this._pointLight2.position.z = -150;
+    this._pointLight2.position.y = 30;
+    this._pointLight2.position.x = -30;
+
+    //debug
+    // const sphereSize = 1;
+    // const pointLightHelper = new THREE.PointLightHelper(this._pointLight, sphereSize);
+    // const pointLightHelper2 = new THREE.PointLightHelper(this._pointLight2, sphereSize);
+    // this._scene.add(pointLightHelper);
+    // this._scene.add(pointLightHelper2);
+
+    this._camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
     this._camera.position.z = 70;
+    this._camera.add(this._pointLight);
+    this._camera.add(this._pointLight2);
+    this._scene.add(this._camera);
 
-
-
-    //BUG - WebGLRenderer canvas property is broken, wont accept... hang on...
-    // nevermind, fixed it by calling .nativeElement 🤡
     this._renderer = new THREE.WebGLRenderer({ canvas: this._sceneRef.nativeElement });
     this._renderer.setPixelRatio(window.devicePixelRatio || 1);
     this._renderer.setSize(window.innerWidth, window.innerHeight);
 
-
     this._controls = new OrbitControls(this._camera, this._renderer.domElement);
     this._controls.target.set(0, 0, 0);
-    this._controls.enablePan = true;
+    this._controls.enablePan = false;
+    this._controls.rotateSpeed = 0.6;
+    this._controls.enableZoom = false;
     this._controls.enableDamping = true;
+    this._controls.minPolarAngle = 1.3;
+    this._controls.maxPolarAngle = 1.3;
     this._controls.update();
 
     this._stats = new Stats();
@@ -103,7 +115,6 @@ export class SceneComponent implements OnInit, AfterViewInit
       this._camera.updateProjectionMatrix();
 
       this._renderer.setSize(width, height);
-      //this._composer.setSize(width, height);
     });
   }
 
@@ -154,11 +165,11 @@ export class SceneComponent implements OnInit, AfterViewInit
       }
     ];
 
-    const planets = [];
 
 
     const circle = new THREE.CircleGeometry(30, planetData.length);
     const vectors = circle.getAttribute('position').array;
+    const planets = [];
     const planetPositions = [];
 
     //create vector3's from circle to position planets nicely
@@ -168,90 +179,62 @@ export class SceneComponent implements OnInit, AfterViewInit
       planetPositions.push(new THREE.Vector3(vectors[i], vectors[i + 2], vectors[i + 1]));
     }
 
-    //add planets to scene
+    planetData.forEach(planet =>
+    {
+      console.log(planet.name + "'s original size:", planet.size);
+
+    });
+
+    //Create the planets and add to array
     for (let i = 0; i < planetData.length; i++)
     {
       const planet = planetData[i];
       const pos = planetPositions[i];
 
-      planets.push(new Planet(planet.name, 5, planet.textureUrl).addToScene(this._scene, pos));
+      //Because there is such a big difference between the actual planet sizes, i knock that
+      //difference down by a percentage to make small planets bigger and big planets smaller
+      const baseSize = 7;
+      const scalePercentage = 50;
+      const size = (((baseSize - planet.size) / 100) * scalePercentage + planet.size);
+
+      planets.push(new Planet(planet.name, size, planet.textureUrl));
+      console.log(planet.name + "'s normalized size:", size);
+
+    }
+
+    //add all the planets to scene
+    for (let i = 0; i < planets.length; i++)
+    {
+      const planet = planets[i];
+      const pos = planetPositions[i];
+
+      planet.addToScene(this._scene, pos);
     }
 
 
-
-    //earth.addMoon('luna', 0.27, 60.33 / 10, 'assets/2k_moon.jpg', 1, 1, 1);
-
-    //Planet sizes are realistic. Based on earths radius, earth being 1 unit in the program.
-    // const mercury = new Planet('mercury', 2440 / 6371, 'assets/2k_mercury.jpg');
-    // const venus = new Planet('venus', 6052 / 6371, 'assets/2k_venus_surface.jpg');
-    // const earth = new Planet('earth', 6371 / 6371, 'assets/2k_earth_daymap.jpg');
-    // const mars = new Planet('mars', 3390 / 6371, 'assets/2k_mars.jpg');
-    // const jupiter = new Planet('jupiter', 69911 / 6371, 'assets/2k_jupiter.jpg');
-    // const saturn = new Planet('saturn', 58232 / 6371, 'assets/2k_saturn.jpg');
-    // const uranus = new Planet('uranus', 25362 / 6371, 'assets/2k_uranus.jpg');
-    // const neptune = new Planet('neptune', 24622 / 6371, 'assets/2k_neptune.jpg');
-    // const mercurySize = mercury.getMesh().geometry.parameters.radius;
-    // const venusSize = venus.getMesh().geometry.parameters.radius;
-    // const earthSize = earth.getMesh().geometry.parameters.radius;
-    // const marsSize = mars.getMesh().geometry.parameters.radius;
-    // const jupiterSize = jupiter.getMesh().geometry.parameters.radius;
-    // const saturnSize = saturn.getMesh().geometry.parameters.radius;
-    // const uranusSize = uranus.getMesh().geometry.parameters.radius;
-    // const neptuneSize = neptune.getMesh().geometry.parameters.radius;
-    // const mercuryPos = mercury.getMesh().position;
-    // const venusPos = venus.getMesh().position;
-    // const earthPos = earth.getMesh().position;
-    // const marsPos = mars.getMesh().position;
-    // const jupiterPos = jupiter.getMesh().position;
-    // const saturnPos = saturn.getMesh().position;
-    // const uranusPos = uranus.getMesh().position;
-    // const neptunePos = neptune.getMesh().position;
-    // mercury.addToScene(this._scene, new THREE.Vector3(0, 0, mercurySize));
-    // venus.addToScene(this._scene, new THREE.Vector3(0, 0, mercurySize * 2 + venusSize));
-    // earth.addToScene(this._scene, new THREE.Vector3(0, 0, mercurySize * 2 + venusSize * 2 + earthSize));
-    // mars.addToScene(this._scene, new THREE.Vector3(0, 0, mercurySize * 2 + venusSize * 2 + earthSize * 2 + marsSize));
-    // jupiter.addToScene(this._scene, new THREE.Vector3(0, 0, mercurySize * 2 + venusSize * 2 + earthSize * 2 + marsSize * 2 + jupiterSize));
-    // saturn.addToScene(this._scene, new THREE.Vector3(0, 0, mercurySize * 2 + venusSize * 2 + earthSize * 2 + marsSize * 2 + jupiterSize * 2 + saturnSize));
-    // uranus.addToScene(this._scene, new THREE.Vector3(0, 0, mercurySize * 2 + venusSize * 2 + earthSize * 2 + marsSize * 2 + jupiterSize * 2 + saturnSize * 2 + uranusSize));
-    // neptune.addToScene(this._scene, new THREE.Vector3(0, 0, mercurySize * 2 + venusSize * 2 + earthSize * 2 + marsSize * 2 + jupiterSize * 2 + saturnSize * 2 + uranusSize * 2 + neptuneSize));
-    // console.log('mercury\'s size: ', mercury.getMesh().geometry.parameters.radius);
-    // console.log('venus\'s size: ', venus.getMesh().geometry.parameters.radius);
-    // console.log('earth\'s size: ', earth.getMesh().geometry.parameters.radius);
-    // console.log('mars\'s size: ', mars.getMesh().geometry.parameters.radius);
-    // console.log('jupiter\'s size: ', jupiter.getMesh().geometry.parameters.radius);
-    // console.log('saturn\'s size: ', saturn.getMesh().geometry.parameters.radius);
-    // console.log('uranus\'s size: ', uranus.getMesh().geometry.parameters.radius);
-    // console.log('neptune\'s size: ', neptune.getMesh().geometry.parameters.radius);
-    // console.log('mercury\'s position: ', mercuryPos);
-    // console.log('venus\'s position: ', venusPos);
-    // console.log('earth\'s position: ', earthPos);
-    // console.log('mars\'s position: ', marsPos);
-    // console.log('jupiter\'s position: ', jupiterPos);
-    // console.log('saturn\'s position: ', saturnPos);
-    // console.log('uranus\'s position: ', uranusPos);
-    // console.log('neptune\'s position: ', neptunePos);
-
-
-
-
-    this.addLights();
+    // const sun = new Planet('sun', 10, 'assets/tobi.jpeg');
+    // sun.addToScene(this._scene, new THREE.Vector3(0, 0, 0));
+    // earth.addMoon('luna', 0.27, 60.33 / 10, 'assets/2k_moon.jpg', 1, 1, 1);
 
     let renderLoop = (() =>
     {
       this._stats.begin();
 
-      //earth.getMesh().rotation.y += 0.01;
-      // cube.rotation.x += 0.01;
-      // cube.rotation.y += 0.01;
-
       this._controls.update();
+
+      planets.forEach((planet, i) =>
+      {
+        const planetMesh = planet.getMesh();
+        planetMesh.position.y = planet.bounce * Math.cos(planet.theta);
+        planet.theta += planet.bounceSpeed;
+        planetMesh.rotation.y += planet.rotationSpeed;
+      });
 
       this._renderer.render(this._scene, this._camera);
       requestAnimationFrame(renderLoop);
 
       this._stats.end();
     });
-
 
     renderLoop();
   }

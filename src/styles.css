@@ -4,3 +4,21 @@ body, app-root, app-scene {
     width: 100%;
     height: 100%;
 }
+
+html {
+    height: 100%;
+    overflow: hidden;
+}
+
+@font-face {
+    font-family: Computerfont;
+    src: url(src\assets\Computerfont.ttf);
+}
+
+h1 {
+    font-family: Computerfont;
+    color: white;
+    letter-spacing: 3px;
+    text-align: center;
+    font-size: 5rem;
+}

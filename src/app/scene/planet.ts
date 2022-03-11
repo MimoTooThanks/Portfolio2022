@@ -38,11 +38,19 @@ abstract class CelestialBody
 export class Planet extends CelestialBody
 {
     private _moons: Moon[] = [];
+    bounce;
+    bounceSpeed;
+    rotationSpeed;
+    theta;
 
 
     constructor (name: string, size: number, textureUrl: string)
     {
         super(name, size, textureUrl);
+        this.bounce = this.randomInRange(0.5, 2);
+        this.bounceSpeed = this.randomInRange(0.01, 0.05);
+        this.rotationSpeed = this.randomInRange(0.005, 0.02);
+        this.theta = 0;
     }
 
     addToScene(scene: THREE.Scene, position: THREE.Vector3): void
@@ -81,13 +89,13 @@ export class Planet extends CelestialBody
 
 
 
-    // animateMoons()
-    // {
-    //     this.mesh.position.y = this.radius * Math.sin(this.theta + this.phi);
-    //     this.mesh.position.x = this.radius * Math.sin(this.theta);
-    //     this.mesh.position.z = this.radius * Math.cos(this.theta);
-    //     this.theta += this.dTheta;
-    // }
+    animateMoons()
+    {
+        // mesh.position.y = radius * Math.cos(theta);
+        // mesh.position.x = radius * Math.sin(theta);
+        // mesh.position.z = radius * Math.cos(theta);
+        // theta += 0.01;
+    }
 
 };
 
@@ -107,10 +115,6 @@ class Moon extends Planet
         this.orbitRadius = orbitRadius;
         this.theta = theta;
         this.phi = phi;
-
-
-
-        console.log("moon", moon.position);
 
 
         //     this.radius = this.mesh.position.x;
