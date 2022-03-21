@@ -38,6 +38,8 @@ abstract class CelestialBody
 export class Planet extends CelestialBody
 {
     private _moons: Moon[] = [];
+    private _planet = this.getMesh();
+    private;
     bounce;
     bounceSpeed;
     rotationSpeed;
@@ -51,17 +53,16 @@ export class Planet extends CelestialBody
         this.bounceSpeed = this.randomInRange(0.01, 0.05);
         this.rotationSpeed = this.randomInRange(0.005, 0.02);
         this.theta = 0;
+        this._planet = this.getMesh();
     }
 
     addToScene(scene: THREE.Scene, position: THREE.Vector3): void
     {
-        const planet = this.getMesh();
+        this._planet.position.x = position.x;
+        this._planet.position.y = position.y;
+        this._planet.position.z = position.z;
 
-        planet.position.x = position.x;
-        planet.position.y = position.y;
-        planet.position.z = position.z;
-
-        scene.add(planet);
+        scene.add(this._planet);
 
         if (this._moons.length > 0)
         {
@@ -70,8 +71,8 @@ export class Planet extends CelestialBody
                 const m = moon.getMesh();
                 const moonR = m.geometry.parameters.radius;
                 const moonDist = moon.distance;
-                const parentPos = planet.position;
-                const parentR = planet.geometry.parameters.radius;
+                const parentPos = this._planet.position;
+                const parentR = this._planet.geometry.parameters.radius;
 
                 m.position.x = parentPos.x + parentR + moonR + moonDist;
                 m.position.y = parentPos.y;
@@ -81,10 +82,30 @@ export class Planet extends CelestialBody
         }
     }
 
-
-    addMoon(name: string, size: number, distance: number, textureUrl: string, radius: number, theta: number, phi: number)
+    animate()
     {
-        this._moons.push(new Moon(this.getMesh(), name, size, distance, textureUrl, radius, theta, phi));
+        this._planet.position.y = this.bounce * Math.cos(this.theta);
+        this.theta += this.bounceSpeed;
+        this._planet.rotation.y += this.rotationSpeed;
+    }
+
+
+    addMoon(name: string,
+        size: number,
+        distance: number,
+        textureUrl: string,
+        radius: number,
+        theta: number,
+        phi: number)
+    {
+        this._moons.push(new Moon(this.getMesh(),
+            name,
+            size,
+            distance,
+            textureUrl,
+            radius,
+            theta,
+            phi));
     }
 
 
@@ -105,7 +126,14 @@ class Moon extends Planet
     theta;
     phi;
     distance;
-    constructor (planet: THREE.Mesh, name: string, size: number, distance: number, textureUrl: string, orbitRadius: number, theta: number, phi: number)
+    constructor (planet: THREE.Mesh,
+        name: string,
+        size: number,
+        distance: number,
+        textureUrl: string,
+        orbitRadius: number,
+        theta: number,
+        phi: number)
     {
         super(name, size, textureUrl);
 

@@ -1,8 +1,16 @@
-import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import
+{
+  AfterViewInit,
+  Component,
+  ElementRef,
+  OnInit,
+  ViewChild
+} from '@angular/core';
 
 import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
 import { Planet } from './planet';
 
 @Component({
@@ -75,20 +83,26 @@ export class SceneComponent implements OnInit, AfterViewInit
     this._pointLight2.position.y = 30;
     this._pointLight2.position.x = -30;
 
-    //debug
+    // TODO remove debug
     // const sphereSize = 1;
     // const pointLightHelper = new THREE.PointLightHelper(this._pointLight, sphereSize);
     // const pointLightHelper2 = new THREE.PointLightHelper(this._pointLight2, sphereSize);
     // this._scene.add(pointLightHelper);
     // this._scene.add(pointLightHelper2);
 
-    this._camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+    this._camera = new THREE.PerspectiveCamera(50,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000);
     this._camera.position.z = 70;
     this._camera.add(this._pointLight);
     this._camera.add(this._pointLight2);
     this._scene.add(this._camera);
 
-    this._renderer = new THREE.WebGLRenderer({ canvas: this._sceneRef.nativeElement });
+    this._renderer = new THREE.WebGLRenderer({
+      canvas: this._sceneRef.nativeElement,
+      antialias: true
+    });
     this._renderer.setPixelRatio(window.devicePixelRatio || 1);
     this._renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -100,6 +114,8 @@ export class SceneComponent implements OnInit, AfterViewInit
     this._controls.enableDamping = true;
     this._controls.minPolarAngle = 1.3;
     this._controls.maxPolarAngle = 1.3;
+    this._controls.minAzimuthAngle = 0;
+    this._controls.maxAzimuthAngle = 0;
     this._controls.update();
 
     this._stats = new Stats();
@@ -165,41 +181,46 @@ export class SceneComponent implements OnInit, AfterViewInit
       }
     ];
 
-
-
     const circle = new THREE.CircleGeometry(30, planetData.length);
     const vectors = circle.getAttribute('position').array;
     const planets = [];
     const planetPositions = [];
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let intersects;
+    let intersected;
 
-    //create vector3's from circle to position planets nicely
+    // Create vector3's from circle to position planets nicely
     for (let i = 6; i < vectors.length; i = i + 3)
     {
-      //swapping Y and Z to basically just rotate the array 90 degrees
-      planetPositions.push(new THREE.Vector3(vectors[i], vectors[i + 2], vectors[i + 1]));
+      // Swapping Y and Z to rotate the array 90 degrees
+      planetPositions.push(new THREE.Vector3(vectors[i],
+        vectors[i + 2],
+        vectors[i + 1]));
     }
 
-    planetData.forEach(planet =>
-    {
-      console.log(planet.name + "'s original size:", planet.size);
+    // TODO remove
+    // planetData.forEach(planet =>
+    // {
+    //   console.log(planet.name + "'s original size:", planet.size);
+    // });
 
-    });
-
-    //Create the planets and add to array
+    // Create the planets and add to array
     for (let i = 0; i < planetData.length; i++)
     {
       const planet = planetData[i];
-      const pos = planetPositions[i];
 
-      //Because there is such a big difference between the actual planet sizes, i knock that
-      //difference down by a percentage to make small planets bigger and big planets smaller
+      /* Because there is such a big difference between the actual planet sizes,
+      i knock that difference down by a percentage to make small planets bigger
+      and big planets smaller while keeping a realistic ratio between them. */
       const baseSize = 7;
       const scalePercentage = 50;
-      const size = (((baseSize - planet.size) / 100) * scalePercentage + planet.size);
+      const size = (((baseSize - planet.size) / 100)
+        * scalePercentage
+        + planet.size);
 
       planets.push(new Planet(planet.name, size, planet.textureUrl));
-      console.log(planet.name + "'s normalized size:", size);
-
+      //console.log(planet.name + "'s normalized size:", size);
     }
 
     //add all the planets to scene
@@ -211,29 +232,106 @@ export class SceneComponent implements OnInit, AfterViewInit
       planet.addToScene(this._scene, pos);
     }
 
-
-    // const sun = new Planet('sun', 10, 'assets/tobi.jpeg');
-    // sun.addToScene(this._scene, new THREE.Vector3(0, 0, 0));
+    // TODO add the moon back in via the addToScene method
     // earth.addMoon('luna', 0.27, 60.33 / 10, 'assets/2k_moon.jpg', 1, 1, 1);
+
+    let onPointerMove = (event) =>
+    {
+      pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+    };
+
+    let quaternion = new THREE.Quaternion(); // create one and reuse it
+
+    let onPointerDown = (event) =>
+    {
+      //console.log(this._camera);
+
+      if (intersected)
+      {
+        console.log(intersected);
+
+        let camera2dPos = new THREE.Vector3(this._camera.position.x, 0, this._camera.position.z);
+        let intersected2dPos = new THREE.Vector3(intersected.position.x, 0, intersected.position.z);
+        let center = new THREE.Vector3(0, 0, 0);
+
+        console.log("center to selection", center.distanceTo(intersected2dPos));
+        console.log("selection to camera", intersected2dPos.distanceTo(camera2dPos));
+        console.log("camera to center", camera2dPos.distanceTo(center));
+
+
+        this._controls.minAzimuthAngle += Math.PI / 4;
+        this._controls.maxAzimuthAngle += Math.PI / 4;
+
+        // this._camera.position.x = intersected.position.x;
+        // this._camera.position.y = intersected.position.y + 100;
+        // this._camera.position.z = intersected.position.z;
+        //this._controls.target.set(intersected.position.x, intersected.position.y, intersected.position.z);
+        // console.log(this._controls.getPolarAngle());
+        // console.log(this._controls);
+
+        // quaternion.setFromUnitVectors(this._camera.position, intersected.position);
+        // console.log(quaternion);
+
+        // this._controls.applyQuaternion(quaternion);
+
+
+      }
+
+
+    };
+
+
+    document.addEventListener('mousemove', onPointerMove);
+    document.addEventListener('pointerdown', onPointerDown);
 
     let renderLoop = (() =>
     {
+      // update frame
       this._stats.begin();
-
       this._controls.update();
-
-      planets.forEach((planet, i) =>
-      {
-        const planetMesh = planet.getMesh();
-        planetMesh.position.y = planet.bounce * Math.cos(planet.theta);
-        planet.theta += planet.bounceSpeed;
-        planetMesh.rotation.y += planet.rotationSpeed;
-      });
-
       this._renderer.render(this._scene, this._camera);
       requestAnimationFrame(renderLoop);
 
+      // animate the planets
+      planets.forEach((planet) =>
+      {
+        planet.animate();
+      });
+
+      // update the raycaster
+      raycaster.setFromCamera(pointer, this._camera);
+      raycaster.intersectObjects(this._scene.children, false);
+
+      // find all objects intersected by the ray
+      intersects = raycaster.intersectObjects(this._scene.children, false);
+
+      // highlight the first object intersected by the ray
+      if (intersects.length > 0)
+      {
+        if (intersected != intersects[0].object)
+        {
+          if (intersected)
+          {
+            intersected.material.emissive.setHex(intersected.currentHex);
+          }
+          intersected = intersects[0].object;
+          intersected.currentHex = intersected.material.emissive.getHex();
+          intersected.material.emissive.setHex(0xff0000);
+        }
+      }
+      else
+      {
+        if (intersected)
+        {
+          intersected.material.emissive.setHex(intersected.currentHex);
+        }
+        intersected = null;
+      }
+
+
       this._stats.end();
+
     });
 
     renderLoop();
